@@ -67,8 +67,8 @@ export const listProducts = async ({
           ...queryParams,
         },
         headers,
-        next,
-        cache: "force-cache",
+        // Avoid stale product grids: rely on live data
+        cache: "no-store",
       }
     )
     .then(({ products, count }) => {

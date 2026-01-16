@@ -1,92 +1,57 @@
-import { listProductsWithSort } from "@lib/data/products"
-import { getRegion } from "@lib/data/regions"
+import { HttpTypes } from "@medusajs/types"
+import { Text } from "@medusajs/ui"
+
 import ProductPreview from "@modules/products/components/product-preview"
-import { Pagination } from "@modules/store/components/pagination"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { listProducts } from "@lib/data/products"
+import { listRegions } from "@lib/data/regions"
 
-const PRODUCT_LIMIT = 12
-
-type PaginatedProductsParams = {
-  limit: number
-  collection_id?: string[]
-  category_id?: string[]
-  id?: string[]
-  order?: string
+type PaginatedProductsProps = {
+  page: number
+  sortBy: string
+  countryCode: string
+  collectionId?: string
+  categoryId?: string
 }
 
 export default async function PaginatedProducts({
-  sortBy,
   page,
+  sortBy,
+  countryCode,
   collectionId,
   categoryId,
-  productsIds,
-  countryCode,
-}: {
-  sortBy?: SortOptions
-  page: number
-  collectionId?: string
-  categoryId?: string
-  productsIds?: string[]
-  countryCode: string
-}) {
-  const queryParams: PaginatedProductsParams = {
-    limit: 12,
-  }
+}: PaginatedProductsProps) {
+  const regions = await listRegions()
 
-  if (collectionId) {
-    queryParams["collection_id"] = [collectionId]
-  }
-
-  if (categoryId) {
-    queryParams["category_id"] = [categoryId]
-  }
-
-  if (productsIds) {
-    queryParams["id"] = productsIds
-  }
-
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
-  }
-
-  const region = await getRegion(countryCode)
+  const region = regions.find((r) =>
+    r.countries?.some((c) => c.iso_2 === countryCode)
+  )
 
   if (!region) {
-    return null
+    return <Text>Region not found</Text>
   }
 
-  let {
-    response: { products, count },
-  } = await listProductsWithSort({
-    page,
-    queryParams,
-    sortBy,
+  const { response } = await listProducts({
+    pageParam: page,
+    queryParams: {
+      limit: 12,
+      order: sortBy,
+      ...(collectionId ? { collection_id: collectionId } : {}),
+      ...(categoryId ? { category_id: [categoryId] } : {}),
+    },
     countryCode,
   })
 
-  const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+  const products = response.products
+
+  if (!products.length) {
+    return <Text>No products found</Text>
+  }
 
   return (
-    <>
-      <ul
-        className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
-        data-testid="products-list"
-      >
-        {products.map((p) => {
-          return (
-            <li key={p.id}>
-              <ProductPreview product={p} region={region} />
-            </li>
-          )
-        })}
-      </ul>
-      {totalPages > 1 && (
-        <Pagination
-          data-testid="product-pagination"
-          page={page}
-          totalPages={totalPages}
-        />
-      )}
-    </>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
+      {products.map((product: HttpTypes.StoreProduct) => (
+        <ProductPreview key={product.id} product={product} region={region} />
+      ))}
+    </div>
   )
 }

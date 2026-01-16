@@ -1,116 +1,162 @@
 "use client"
 
-import { Popover, PopoverPanel, Transition } from "@headlessui/react"
-import { ArrowRightMini, XMark } from "@medusajs/icons"
-import { Text, clx, useToggleState } from "@medusajs/ui"
 import { Fragment } from "react"
+import { Popover, Transition } from "@headlessui/react"
+import { XMark, ArrowRightMini } from "@medusajs/icons"
+import { Text, clx, useToggleState } from "@medusajs/ui"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
-const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Account: "/account",
-  Cart: "/cart",
+type SideMenuProps = {
+  regions: HttpTypes.StoreRegion[] | null
+  collections?: HttpTypes.StoreCollection[]
 }
 
-const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
+export default function SideMenu({
+  regions,
+  collections = [],
+}: SideMenuProps) {
   const toggleState = useToggleState()
 
   return (
-    <div className="h-full">
-      <div className="flex items-center h-full">
-        <Popover className="h-full flex">
-          {({ open, close }) => (
-            <>
-              <div className="relative flex h-full">
-                <Popover.Button
-                  data-testid="nav-menu-button"
-                  className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-ui-fg-base"
-                >
-                  Menu
-                </Popover.Button>
-              </div>
+    <div className="h-full flex items-center">
+      <Popover className="relative h-full">
+        {({ open, close }) => (
+          <>
+            {/* BUTTON */}
+            <Popover.Button className="h-full flex items-center text-sm hover:text-ui-fg-base">
+              Menu
+            </Popover.Button>
 
-              {open && (
-                <div
-                  className="fixed inset-0 z-[50] bg-black/0 pointer-events-auto"
-                  onClick={close}
-                  data-testid="side-menu-backdrop"
-                />
-              )}
+            {/* BACKDROP */}
+            <Transition
+              show={open}
+              as={Fragment}
+              enter="transition-opacity duration-200"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="transition-opacity duration-150"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div
+                className="fixed inset-0 z-40 bg-black/40"
+                onClick={close}
+              />
+            </Transition>
 
-              <Transition
-                show={open}
-                as={Fragment}
-                enter="transition ease-out duration-150"
-                enterFrom="opacity-0"
-                enterTo="opacity-100 backdrop-blur-2xl"
-                leave="transition ease-in duration-150"
-                leaveFrom="opacity-100 backdrop-blur-2xl"
-                leaveTo="opacity-0"
-              >
-                <PopoverPanel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-[51] inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
-                  <div
-                    data-testid="nav-menu-popup"
-                    className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
+            {/* PANEL */}
+            <Transition
+              show={open}
+              as={Fragment}
+              enter="transition-transform duration-200"
+              enterFrom="-translate-x-full"
+              enterTo="translate-x-0"
+              leave="transition-transform duration-150"
+              leaveFrom="translate-x-0"
+              leaveTo="-translate-x-full"
+            >
+              <Popover.Panel className="fixed z-50 inset-y-0 left-0 w-[85%] max-w-sm bg-[rgba(3,7,18,0.95)] text-ui-fg-on-color p-6 flex flex-col justify-between pointer-events-auto">
+                {/* CLOSE */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={close}
+                    className="hover:opacity-70"
+                    aria-label="Close menu"
                   >
-                    <div className="flex justify-end" id="xmark">
-                      <button data-testid="close-menu-button" onClick={close}>
-                        <XMark />
-                      </button>
-                    </div>
-                    <ul className="flex flex-col gap-6 items-start justify-start">
-                      {Object.entries(SideMenuItems).map(([name, href]) => {
-                        return (
-                          <li key={name}>
-                            <LocalizedClientLink
-                              href={href}
-                              className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                              onClick={close}
-                              data-testid={`${name.toLowerCase()}-link`}
-                            >
-                              {name}
-                            </LocalizedClientLink>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    <div className="flex flex-col gap-y-6">
-                      <div
-                        className="flex justify-between"
-                        onMouseEnter={toggleState.open}
-                        onMouseLeave={toggleState.close}
+                    <XMark />
+                  </button>
+                </div>
+
+                {/* NAV */}
+                <nav className="mt-8">
+                  <ul className="flex flex-col gap-6">
+                    <li>
+                      <LocalizedClientLink
+                        href="/"
+                        onClick={close}
+                        className="text-3xl hover:opacity-70 transition"
                       >
-                        {regions && (
-                          <CountrySelect
-                            toggleState={toggleState}
-                            regions={regions}
-                          />
+                        Home
+                      </LocalizedClientLink>
+                    </li>
+
+                    <li>
+                      <LocalizedClientLink
+                        href="/store"
+                        onClick={close}
+                        className="text-3xl hover:opacity-70 transition"
+                      >
+                        Store
+                      </LocalizedClientLink>
+                    </li>
+
+                    {collections.map((collection) => (
+                      <li key={collection.id}>
+                        <LocalizedClientLink
+                          href={`/collections/${collection.handle}`}
+                          onClick={close}
+                          className="text-2xl opacity-80 hover:opacity-100 transition"
+                        >
+                          {collection.title}
+                        </LocalizedClientLink>
+                      </li>
+                    ))}
+
+                    <li>
+                      <LocalizedClientLink
+                        href="/account"
+                        onClick={close}
+                        className="text-3xl hover:opacity-70 transition"
+                      >
+                        Account
+                      </LocalizedClientLink>
+                    </li>
+
+                    <li>
+                      <LocalizedClientLink
+                        href="/cart"
+                        onClick={close}
+                        className="text-3xl hover:opacity-70 transition"
+                      >
+                        Cart
+                      </LocalizedClientLink>
+                    </li>
+                  </ul>
+                </nav>
+
+                {/* FOOTER */}
+                <div className="flex flex-col gap-y-6 mt-12">
+                  {regions && (
+                    <div
+                      className="flex justify-between items-center"
+                      onMouseEnter={toggleState.open}
+                      onMouseLeave={toggleState.close}
+                    >
+                      <CountrySelect
+                        toggleState={toggleState}
+                        regions={regions}
+                      />
+                      <ArrowRightMini
+                        className={clx(
+                          "transition-transform",
+                          toggleState.state && "-rotate-90"
                         )}
-                        <ArrowRightMini
-                          className={clx(
-                            "transition-transform duration-150",
-                            toggleState.state ? "-rotate-90" : ""
-                          )}
-                        />
-                      </div>
-                      <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
-                      </Text>
+                      />
                     </div>
-                  </div>
-                </PopoverPanel>
-              </Transition>
-            </>
-          )}
-        </Popover>
-      </div>
+                  )}
+
+                  <Text className="txt-compact-small opacity-70">
+                    © {new Date().getFullYear()} Your Store
+                  </Text>
+                </div>
+              </Popover.Panel>
+            </Transition>
+          </>
+        )}
+      </Popover>
     </div>
   )
 }
-
-export default SideMenu
