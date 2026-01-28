@@ -1,5 +1,5 @@
 import Stripe from "stripe"
-import { supabaseAdmin } from "../../../../lib/supabaseAdmin"
+import { createClient } from "@supabase/supabase-js"
 
 type StripeLineItem = {
   description: string | null
@@ -45,14 +45,13 @@ type StripeEvent = {
 export const runtime = "nodejs"
 
 export async function POST(request: Request) {
-  const secretKey = process.env.STRIPE_SECRET_KEY
+  const stripeSecret = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!secretKey || !webhookSecret) {
-    return Response.json(
-      { error: "Stripe environment variables are missing." },
-      { status: 500 }
-    )
+  if (!stripeSecret || !webhookSecret || !supabaseUrl || !serviceRoleKey) {
+    return new Response("Server misconfigured", { status: 500 })
   }
 
   const payload = await request.text()
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
 
   let event: StripeEvent
   try {
-    const stripe = new Stripe(secretKey, {
+    const stripe = new Stripe(stripeSecret, {
       apiVersion: "2024-06-20",
     })
     event = stripe.webhooks.constructEvent(
@@ -95,7 +94,7 @@ export async function POST(request: Request) {
     {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${secretKey}`,
+        Authorization: `Bearer ${stripeSecret}`,
       },
     }
   )
@@ -141,6 +140,12 @@ export async function POST(request: Request) {
     currency: session.currency ?? "usd",
     stripe_session_id: sessionId,
   }
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+    },
+  })
 
   const { error } = await supabaseAdmin
     .from("orders")
